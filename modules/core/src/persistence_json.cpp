@@ -53,29 +53,26 @@ public:
     void endWriteStruct(const FStructData& current_struct)
     {
         int struct_flags = current_struct.flags;
-        CV_Assert( FileNode::isCollection(struct_flags) );
 
-        if( !FileNode::isFlow(struct_flags) )
-        {
-#if 0
-            if ( fs->bufferPtr() <= fs->bufferStart() + fs->space )
-            {
-                /* some bad code for base64_writer... */
-                ptr = fs->bufferPtr();
-                *ptr++ = '\n';
-                *ptr++ = '\0';
-                fs->puts( fs->bufferStart() );
-                fs->setBufferPtr(fs->bufferStart());
+        if (FileNode::isCollection(struct_flags)) {
+            if (!FileNode::isFlow(struct_flags)) {
+                if (fs->bufferPtr() <= fs->bufferStart() + fs->get_space()) {
+                    /* some bad code for base64_writer... */
+                    char *ptr = fs->bufferPtr();
+                    *ptr++ = '\n';
+                    *ptr++ = '\0';
+                    fs->puts(fs->bufferStart());
+                    fs->setBufferPtr(fs->bufferStart());
+                }
+                fs->flush();
             }
-#endif
-            fs->flush();
-        }
 
-        char* ptr = fs->bufferPtr();
-        if( ptr > fs->bufferStart() + current_struct.indent && !FileNode::isEmptyCollection(struct_flags) )
-            *ptr++ = ' ';
-        *ptr++ = FileNode::isMap(struct_flags) ? '}' : ']';
-        fs->setBufferPtr(ptr);
+            char *ptr = fs->bufferPtr();
+            if (ptr > fs->bufferStart() + current_struct.indent && !FileNode::isEmptyCollection(struct_flags))
+                *ptr++ = ' ';
+            *ptr++ = FileNode::isMap(struct_flags) ? '}' : ']';
+            fs->setBufferPtr(ptr);
+        }
     }
 
     void write(const char* key, int value)
@@ -136,6 +133,20 @@ public:
 
     void writeScalar(const char* key, const char* data)
     {
+        /* check write_struct */
+
+        fs->check_if_write_struct_is_delayed(false);
+        if ( fs->get_state_of_writing_base64() == FileStorage_API::Uncertain )
+        {
+            fs->switch_to_Base64_state( FileStorage_API::NotUse );
+        }
+        else if ( fs->get_state_of_writing_base64() == FileStorage_API::InUse )
+        {
+            CV_Error( CV_StsError, "At present, output Base64 data only." );
+        }
+
+        /* check parameters */
+
         size_t key_len = 0u;
         if( key && *key == '\0' )
             key = 0;

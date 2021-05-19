@@ -233,6 +233,16 @@ public:
 
     void writeScalar(const char* key, const char* data)
     {
+        fs->check_if_write_struct_is_delayed(false);
+        if ( fs->get_state_of_writing_base64() == FileStorage_API::Uncertain )
+        {
+            fs->switch_to_Base64_state( FileStorage_API::NotUse );
+        }
+        else if ( fs->get_state_of_writing_base64() == FileStorage_API::InUse )
+        {
+            CV_Error( CV_StsError, "At present, output Base64 data only." );
+        }
+
         int len = (int)strlen(data);
         if( key && *key == '\0' )
             key = 0;
