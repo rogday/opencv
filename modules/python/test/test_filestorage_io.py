@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """Algorithm serialization test."""
 from __future__ import print_function
+import base64
+import json
 import tempfile
 import os
 import cv2 as cv
@@ -108,6 +110,87 @@ class filestorage_io_test(NewOpenCVTests):
 
     def test_json(self):
         self.run_fs_test(".json")
+
+    def test_base64(self):
+        fd, fname = tempfile.mkstemp(prefix="opencv_python_sample_filestorage_base64", suffix=".json")
+        os.close(fd)
+        np.random.seed(42)
+        self.write_base64_json(fname)
+        os.remove(fname)
+
+    @staticmethod
+    def get_normal_2d_mat():
+        rows = 10
+        cols = 20
+        ch = 3
+
+        image = np.zeros((rows, cols, ch), np.uint8)
+        image[:] = (1, 2, 127)
+
+        for i in range(rows):
+            for j in range(cols):
+                image[i, j, 1] = (i + j) % 256
+
+        return image
+
+    @staticmethod
+    def get_normal_nd_mat():
+        shape = (2, 2, 1, 2)
+        ch = 4
+
+        image = np.zeros(shape + (ch,), np.float64)
+        image[:] = (0.888, 0.111, 0.666, 0.444)
+
+        return image
+
+    @staticmethod
+    def get_empty_2d_mat():
+        shape = (0, 0)
+        ch = 1
+
+        image = np.zeros(shape + (ch,), np.uint8)
+
+        return image
+
+    @staticmethod
+    def get_random_mat():
+        rows = 8
+        cols = 16
+        ch = 1
+
+        image = np.random.rand(rows, cols, ch)
+
+        return image
+
+    @staticmethod
+    def decode(data):
+        # strip $base64$
+        encoded = data[8:]
+
+        if len(encoded) == 0:
+            return b''
+
+        # strip info about datatype and padding
+        return base64.b64decode(encoded)[24:]
+
+    def write_base64_json(self, fname):
+        fs = cv.FileStorage(fname, cv.FileStorage_WRITE_BASE64)
+
+        mats = {'normal_2d_mat': self.get_normal_2d_mat(),
+                'normal_nd_mat': self.get_normal_nd_mat(),
+                'empty_2d_mat': self.get_empty_2d_mat(),
+                'random_mat': self.get_random_mat()}
+
+        for name, mat in mats.items():
+            fs.write(name, mat)
+
+        fs.release()
+
+        file = open(fname)
+        data = json.load(file)
+
+        for name, mat in mats.items():
+            self.assertEqual(bytes(memoryview(mat)), self.decode(data[name]['data']))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
