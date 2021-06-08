@@ -190,7 +190,13 @@ class filestorage_io_test(NewOpenCVTests):
         data = json.load(file)
 
         for name, mat in mats.items():
-            self.assertEqual(bytes(memoryview(mat)), self.decode(data[name]['data']))
+            buffer = b''
+
+            if mat.size != 0:
+                buffer = mat.tobytes()
+
+            self.assertEqual(buffer, self.decode(data[name]['data']))
+
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

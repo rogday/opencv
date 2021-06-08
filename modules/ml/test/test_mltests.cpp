@@ -309,51 +309,6 @@ TEST_P(ML_SL_Params, save_load)
 
 INSTANTIATE_TEST_CASE_P(/**/, ML_SL_Params, testing::ValuesIn(ML_SL_Params_List));
 
-TEST_P(ML_SL_Params, base64)
-{
-    const ML_SL_Params_t & param = GetParam();
-
-    DatasetDesc &dataset = getDataset(param.dataset);
-    Ptr<TrainData> data = dataset.load();
-    ASSERT_TRUE(data);
-    ASSERT_TRUE(data->getNSamples() > 0);
-
-    Mat responses1;
-    string file = tempfile(".json.gz");
-    {
-        Ptr<StatModel> m = param.factory->createNew(dataset);
-        ASSERT_TRUE(m);
-        ASSERT_TRUE(m->train(data, 0));
-        m->calcError(data, true, responses1);
-        m->save(file + "?base64");
-    }
-
-    std::ifstream f(file.c_str(), std::ios::in|std::ios::binary);
-    f.seekg(0, std::fstream::end);
-    size_t sz = (size_t)f.tellg();
-
-    f.seekg(0, std::ios::beg);
-    std::vector<char> test_data(sz);
-    f.read(&test_data[0], sz);
-    f.close();
-
-    std::string reference_file = string(cvtest::TS::ptr()->get_data_path()) + "base64/" +
-            param.factory->name() + "_" + param.dataset + ".json.gz";
-    std::ifstream reference(reference_file, std::ios::in|std::ios::binary);
-    ASSERT_TRUE(reference.is_open());
-    reference.seekg(0, std::fstream::end);
-    size_t ref_sz = (size_t)reference.tellg();
-
-    reference.seekg(0, std::ios::beg);
-    std::vector<char> reference_data(ref_sz);
-    reference.read(&reference_data[0], ref_sz);
-    reference.close();
-
-    EXPECT_EQ(reference_data, test_data);
-
-    remove(file.c_str());
-}
-
 //==================================================================================================
 
 TEST(TrainDataGet, layout_ROW_SAMPLE)  // Details: #12236

@@ -1026,7 +1026,7 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
     CV_Assert(write_mode);
 
     if (is_using_base64 || state_of_writing_base64 == FileStorage_API::Base64State::InUse) {
-        writeRawDataBase64(_data, len, dt.data());
+        writeRawDataBase64(_data, len, dt.c_str());
         return;
     } else if (state_of_writing_base64 == FileStorage_API::Base64State::Uncertain) {
         switch_to_Base64_state(FileStorage_API::Base64State::NotUse);
@@ -1222,12 +1222,12 @@ void FileStorage::Impl::check_if_write_struct_is_delayed(bool change_type_to_bas
 
         /* call */
         if (change_type_to_base64) {
-            startWriteStruct_helper(struct_key.data(), struct_flags, "binary");
+            startWriteStruct_helper(struct_key.c_str(), struct_flags, "binary");
             if (state_of_writing_base64 != FileStorage_API::Uncertain)
                 switch_to_Base64_state(FileStorage_API::Uncertain);
             switch_to_Base64_state(FileStorage_API::InUse);
         } else {
-            startWriteStruct_helper(struct_key.data(), struct_flags, type_name.data());
+            startWriteStruct_helper(struct_key.c_str(), struct_flags, type_name.c_str());
             if (state_of_writing_base64 != FileStorage_API::Uncertain)
                 switch_to_Base64_state(FileStorage_API::Uncertain);
             switch_to_Base64_state(FileStorage_API::NotUse);
