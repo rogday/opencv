@@ -19,13 +19,13 @@ class OpenCVBackendRep(BackendRep):
 
         n = len(inputs)
         input_names = [str(x) for x in range(n)]
-        self.model.setInputNames(input_names)
+        self.model.setInputsNames(input_names)
 
         for blob, name in zip(inputs, input_names):
-            self.model.setInput(blob, name)
+            self.model.setInput(cv.Mat(blob), name)
 
         output_names = self.model.getUnconnectedOutLayersNames()
-        return self.model.forwardAndRetrieve(output_names)
+        return self.model.forward(output_names)
 
 
 class OpenCVBackend(Backend):
@@ -72,7 +72,7 @@ class OpenCVBackend(Backend):
     @classmethod
     def prepare(cls, model, device=None, **kwargs):
         """
-        Load the model and creates a :class:`cv2.dnn.Net`
+        Load the model and creates a :class:`cv.dnn.Net`
         ready to be used as a backend.
 
         :param model: ModelProto (returned by `onnx.load`),
@@ -85,8 +85,7 @@ class OpenCVBackend(Backend):
 
         binary = model.SerializeToString()  # TODO: check if string or bytes
         check_model(binary)
-        print(type(binary), binary)
-        net = cv2.dnn.readNet("onnx", list(binary))
+        net = cv.dnn.readNet("onnx", list(binary))
 
         return OpenCVBackendRep(net)
 
@@ -121,8 +120,3 @@ is_compatible = OpenCVBackend.is_compatible
 prepare = OpenCVBackend.prepare
 run = OpenCVBackend.run_model
 supports_device = OpenCVBackend.supports_device
-
-OpenCVBackend.__module__ = cv.__name__
-cv.OpenCVBackend = OpenCVBackend
-OpenCVBackendRep.__module__ = cv.__name__
-cv.OpenCVBackendRep = OpenCVBackendRep
