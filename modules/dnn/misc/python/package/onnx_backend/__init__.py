@@ -25,7 +25,7 @@ class OpenCVBackendRep(BackendRep):
             self.model.setInput(cv.Mat(blob), name)
 
         output_names = self.model.getUnconnectedOutLayersNames()
-        return self.model.forward(output_names)
+        return self.model.forwardAndRetrieve(output_names)
 
 
 class OpenCVBackend(Backend):
