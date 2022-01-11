@@ -49,8 +49,8 @@
 /**
 @defgroup objdetect Object Detection
 
-Haar Feature-based Cascade Classifier for Object Detection
-----------------------------------------------------------
+@{
+    @defgroup objdetect_cascade_classifier Cascade Classifier for Object Detection
 
 The object detector described below has been initially proposed by Paul Viola @cite Viola01 and
 improved by Rainer Lienhart @cite Lienhart02 .
@@ -90,8 +90,7 @@ middle) and the sum of the image pixels under the black stripe multiplied by 3 i
 compensate for the differences in the size of areas. The sums of pixel values over a rectangular
 regions are calculated rapidly using integral images (see below and the integral description).
 
-To see the object detector at work, have a look at the facedetect demo:
-<https://github.com/opencv/opencv/tree/master/samples/cpp/dbt_face_detection.cpp>
+Check @ref tutorial_cascade_classifier "the corresponding tutorial" for more details.
 
 The following reference is for the detection part only. There is a separate application called
 opencv_traincascade that can train a cascade of boosted classifiers from a set of samples.
@@ -99,10 +98,13 @@ opencv_traincascade that can train a cascade of boosted classifiers from a set o
 @note In the new C++ interface it is also possible to use LBP (local binary pattern) features in
 addition to Haar-like features. .. [Viola01] Paul Viola and Michael J. Jones. Rapid Object Detection
 using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is available online at
-<http://research.microsoft.com/en-us/um/people/viola/Pubs/Detect/violaJones_CVPR2001.pdf>
+<https://github.com/SvHey/thesis/blob/master/Literature/ObjectDetection/violaJones_CVPR2001.pdf>
 
-@{
-    @defgroup objdetect_c C API
+    @defgroup objdetect_hog HOG (Histogram of Oriented Gradients) descriptor and object detector
+    @defgroup objdetect_qrcode QRCode detection and encoding
+    @defgroup objdetect_dnn_face DNN-based face detection and recognition
+Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
+    @defgroup objdetect_common Common functions and classes
 @}
  */
 
@@ -111,13 +113,15 @@ typedef struct CvHaarClassifierCascade CvHaarClassifierCascade;
 namespace cv
 {
 
-//! @addtogroup objdetect
+//! @addtogroup objdetect_common
 //! @{
 
 ///////////////////////////// Object Detection ////////////////////////////
 
-//! class for grouping object candidates, detected by Cascade Classifier, HOG etc.
-//! instance of the class is to be passed to cv::partition (see cxoperations.hpp)
+/** @brief This class is used for grouping object candidates detected by Cascade Classifier, HOG etc.
+
+instance of the class is to be passed to cv::partition
+ */
 class CV_EXPORTS SimilarRects
 {
 public:
@@ -162,6 +166,10 @@ CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, std::vector<int>&
 CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights,
                                             std::vector<double>& foundScales,
                                             double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
+//! @}
+
+//! @addtogroup objdetect_cascade_classifier
+//! @{
 
 template<> struct DefaultDeleter<CvHaarClassifierCascade>{ CV_EXPORTS void operator ()(CvHaarClassifierCascade* obj) const; };
 
@@ -243,7 +251,7 @@ public:
     CV_WRAP bool load( const String& filename );
     /** @brief Reads a classifier from a FileStorage node.
 
-    @note The file may contain a new cascade classifier (trained traincascade application) only.
+    @note The file may contain a new cascade classifier (trained by the traincascade application) only.
      */
     CV_WRAP bool read( const FileNode& node );
 
@@ -260,12 +268,6 @@ public:
     cvHaarDetectObjects. It is not used for a new cascade.
     @param minSize Minimum possible object size. Objects smaller than that are ignored.
     @param maxSize Maximum possible object size. Objects larger than that are ignored. If `maxSize == minSize` model is evaluated on single scale.
-
-    The function is parallelized with the TBB library.
-
-    @note
-       -   (Python) A face detection example using cascade classifiers can be found at
-            opencv_source_code/samples/python/facedetect.py
     */
     CV_WRAP void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -338,7 +340,10 @@ public:
 };
 
 CV_EXPORTS Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator();
+//! @}
 
+//! @addtogroup objdetect_hog
+//! @{
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
 //! struct for detection region of interest (ROI)
@@ -666,6 +671,73 @@ public:
     */
     void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
+//! @}
+
+//! @addtogroup objdetect_qrcode
+//! @{
+
+class CV_EXPORTS_W QRCodeEncoder {
+protected:
+    QRCodeEncoder();  // use ::create()
+public:
+    virtual ~QRCodeEncoder();
+
+    enum EncodeMode {
+        MODE_AUTO              = -1,
+        MODE_NUMERIC           = 1, // 0b0001
+        MODE_ALPHANUMERIC      = 2, // 0b0010
+        MODE_BYTE              = 4, // 0b0100
+        MODE_ECI               = 7, // 0b0111
+        MODE_KANJI             = 8, // 0b1000
+        MODE_STRUCTURED_APPEND = 3  // 0b0011
+    };
+
+    enum CorrectionLevel {
+        CORRECT_LEVEL_L = 0,
+        CORRECT_LEVEL_M = 1,
+        CORRECT_LEVEL_Q = 2,
+        CORRECT_LEVEL_H = 3
+    };
+
+    enum ECIEncodings {
+        ECI_UTF8 = 26
+    };
+
+    /** @brief QR code encoder parameters.
+     @param version The optional version of QR code (by default - maximum possible depending on
+                    the length of the string).
+     @param correction_level The optional level of error correction (by default - the lowest).
+     @param mode The optional encoding mode - Numeric, Alphanumeric, Byte, Kanji, ECI or Structured Append.
+     @param structure_number The optional number of QR codes to generate in Structured Append mode.
+    */
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW int version;
+        CV_PROP_RW CorrectionLevel correction_level;
+        CV_PROP_RW EncodeMode mode;
+        CV_PROP_RW int structure_number;
+    };
+
+    /** @brief Constructor
+    @param parameters QR code encoder parameters QRCodeEncoder::Params
+    */
+    static CV_WRAP
+    Ptr<QRCodeEncoder> create(const QRCodeEncoder::Params& parameters = QRCodeEncoder::Params());
+
+    /** @brief Generates QR code from input string.
+     @param encoded_info Input string to encode.
+     @param qrcode Generated QR code.
+    */
+    CV_WRAP virtual void encode(const String& encoded_info, OutputArray qrcode) = 0;
+
+    /** @brief Generates QR code from input string in Structured Append mode. The encoded message is splitting over a number of QR codes.
+     @param encoded_info Input string to encode.
+     @param qrcodes Vector of generated QR codes.
+    */
+    CV_WRAP virtual void encodeStructuredAppend(const String& encoded_info, OutputArrayOfArrays qrcodes) = 0;
+
+};
 
 class CV_EXPORTS_W QRCodeDetector
 {
@@ -764,7 +836,7 @@ protected:
     Ptr<Impl> p;
 };
 
-//! @} objdetect
+//! @}
 }
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
